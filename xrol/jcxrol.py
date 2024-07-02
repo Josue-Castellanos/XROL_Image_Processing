@@ -168,22 +168,19 @@ class H5:
         else:
             print("Intensity data not found.")
             return None
-            
-    def GetSubstrateHeight():
-        # Cam_window is in the format (x_start, y_start, x_end, y_end)
-        x_start, y_start, x_end, y_end = cam_window[0]
-        # Calculate Height
-        height_in_meters = (y_end - y_start) * lat_res[0]
-        return height_in_meters
 
-    def GetSubstrateWidth():
-        # Cam_window is in the format (x_start, y_start, x_end, y_end)
-        x_start, y_start, x_end, y_end = cam_window[0]
+    def GetSubstrateLength(pixels):
         # Calculate Height
-        width_in_meters = (x_end - x_start) * lat_res[0]
-        return width_in_meters
+        length_in_meters = pixels * lat_res
+        return float(length_in_meters)
 
-    def GetRowGoodPixel(surface_data):
+    def GetTotalRows(surface_data):
+        return surface_data.shape[0]
+    
+    def GetTotalColumns(surface_data):
+        return surface_data.shape[1]
+        
+    def GetTotalRowsList(surface_data):
         row = {}
         # Print each value with its pixel coordinates
         rows, cols = surface_data.shape
@@ -191,28 +188,48 @@ class H5:
             count = 0
             for j in range(cols):
                 if np.isnan(surface_data[i,j]):
-                    continue
+                    pass
                 else:
                     count += 1
             row[f'row {i}'] = count
-        
-        total = []
-        height_count = 0
-
-        good_row = {}
-        for key, val in row.items():
+        return row
+    
+    def GetTotalColumnsList(surface_data):
+        col = {}
+        # Print each value with its pixel coordinates
+        rows, cols = surface_data.shape
+        for i in range(cols):
+            count = 0
+            for j in range(rows):
+                if np.isnan(surface_data[j, i]):
+                    continue
+                else:
+                    count += 1
+            col[f'col {i}'] = count
+        return col
+    
+    def GetGoodPixelList(dict):
+        good = {}
+        for key, val in dict.items():
             if val > 0:
-                good_row[f'{key}'] = val
-                total.append(val)
-                height_count += 1
+                good[f'{key}'] = val
             else:
                 pass
-        average = np.average(total)
+        return good
+    
+    def GetPixelAvg(dict):
+        total = []
+        for key, val in dict.items():
+            if val > 0:
+                dict[f'{key}'] = val
+                total.append(val)
+            else:
+                pass
+        return np.average(total)
 
-        print("\nNumber of Rows with Good Pixels: ", height_count)
-        print("Average Pixels per Row: ", average)
-        return good_row
-        
+    def GetGoodCount(dict):
+        return int(len(dict))
+    
     def GetFirstLastRow(surface_data):
         rows = surface_data.shape[0]
         first_last = {}
@@ -227,39 +244,7 @@ class H5:
                     last_good = j
             if first_good is not None:
                 first_last[f'row {i}'] = {'first_good': first_good, 'last_good': last_good}
-
         return first_last
-
-
-    def GetColumnGoodPixel(surface_data):
-        col = {}
-    
-        # Print each value with its pixel coordinates
-        rows, cols = surface_data.shape
-        for i in range(cols):
-            count = 0
-            for j in range(rows):
-                if np.isnan(surface_data[j, i]):
-                    continue
-                else:
-                    count += 1
-            col[f'col {i}'] = count
-        
-        total = []
-        count = 0
-        good_col = {}
-        for key, val in col.items():
-            if val > 0:
-                good_col[f'{key}'] = val
-                total.append(val)
-                count += 1
-            else:
-                pass
-        average = np.average(total)
-
-        print("\nNumber of Columns with Good Pixels: ", count)
-        print("Average Pixels per Col: ", average)
-        return good_col
 
     def GetFirstLastColumn(surface_data):
         cols = surface_data.shape[1]
@@ -276,8 +261,13 @@ class H5:
             if first_good is not None:
                 first_last[f'col {i}'] = {'first_good': first_good, 'last_good': last_good}
         return first_last
-        # for key, val in first_last.items():
-        #     print(f"{key}: First good pixel at row {val['first_good']}, Last good pixel at row {val['last_good']}")
+    
+    def GetStandardDev(dict):
+        std = []
+        for k, v in dict.items():
+            std.append(v)
+        std = np.std(std)
+        return std
 
     def GetResolution():
         #Return the wavelength in meters stored in the H5 file
@@ -403,5 +393,5 @@ class PNG:
     
 
 class Plot: 
-    def plotData(data):
+    def PlotData(data):
         return plt.pcolormesh(data)
