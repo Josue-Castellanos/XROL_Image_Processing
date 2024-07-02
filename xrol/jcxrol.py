@@ -3,8 +3,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 from glob import glob
+from io import StringIO
 import cv2
 import pandas as pd
+import os
 
 class H5:
     def ReadFile(filename, type=None):
@@ -339,10 +341,79 @@ class TIFF:
     
 
 class TXT:
-    def ReadFile():
-        pd.read_csv('../XROL_Image_processing/AutoColl 2303/AC_AIF2303-1.txt', header=13, delimiter='\t')
-        return
+    def GlobFileNames(dirNum):
+        basepath = '/Volumes/SanDisk/Image Single Motor Scan'  # My sandisk drive
+        #basepath = '/Beamline Controls/BCS Setup Data/240625'
+        
+        dir_path = f'{basepath} 000{dirNum} Images/*.Png'
+        
+        # if not os.path.isfile(dir_path):
+        #     print(f"File not found: {dir_path}")
+        #     return
+        
+        file_list = glob(dir_path)  # Sort list
+        file_list.sort()
+        
+        return file_list
     
+    def ExtractData(fp):
+        # Read the file content
+        with open(fp, 'r') as file:
+            lines = file.readlines()
+
+        # Find the line where DATA starts
+        for i, line in enumerate(lines):
+            if 'DATA' in line:
+                data_start_idx = i + 1
+                break
+        
+        return data_start_idx, lines
+    
+    def ReadData2DF(start_index, lines):
+        # Read the data into a pandas DataFrame
+        data_lines = lines[start_index:]
+        data_str = ''.join(data_lines)
+        
+        # Convert the data into a DataFrame
+        data = StringIO(data_str)
+        df = pd.read_csv(data, sep='\t')
+
+        return df
+    
+    
+    def CropImages(files, startXpixel, endXpixel, startYpixel, endYpixel, coords):
+        def CropRotateImagesToRegion(file, startXpixel, endXpixel, startYpixel, endYpixel, coordinate):
+            def ModifyFilename(file):
+                basename = os.path.basename(file)
+                # Remove a specific part of the string
+                modified_basename = basename.replace('Image Single Motor Scan ', '')
+                modified_basename = modified_basename.replace(' ', '_')
+
+                return modified_basename
+
+            # Open an image file
+            with Image.open(file) as img:
+                # Crop the image
+                cropped_img = img.crop((startXpixel, startYpixel, endXpixel, endYpixel))
+                # Rotate the image 90 degrees, Pillow 90 default is counterclockwise so -90 is needed for clockwise
+                rotated_img = cropped_img.rotate(-90, expand=True)
+                # Modify the new file name of image
+                mod_name = ModifyFilename(file)
+                # Save the cropped image
+                cropped_file = f"Cropped_Rotated_{coordinate}mm_" + mod_name
+                rotated_img.save(cropped_file)
+                print(f"Cropped image saved as: {cropped_file}")
+                
+                return cropped_file
+
+        croppedFiles = []
+        for file, coordinate in zip(files, coords):
+            cropped_file = CropRotateImagesToRegion(file, startXpixel, endXpixel, startYpixel, endYpixel, coordinate)
+            if cropped_file:
+                croppedFiles.append(cropped_file)
+
+        return croppedFiles
+
 
 class PNG:
     def ReadFile():
